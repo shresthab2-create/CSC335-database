@@ -44,17 +44,20 @@ class Item(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def create_admin_user():
-    admin = User.query.filter_by(username='admin').first()
-    if not admin:
-        admin = User(username='admin', 
-                     password=generate_password_hash('1234'),
-                     is_admin=True)
-        db.session.add(admin)
+def add_admin_user(username, password):
+    new_admin = User(
+        username=username,
+        password=password,  # Store direct password for MySQL compatibility
+        is_admin=True
+    )
+    try:
+        db.session.add(new_admin)
         db.session.commit()
-    else:
-        admin.password = generate_password_hash('1234')
-        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error adding user: {e}")
+        return False
 
 def generate_unique_barcode():
     while True:
@@ -135,8 +138,12 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        
+        # Get user from database
         user = User.query.filter_by(username=username).first()
-        if user and username == 'admin' and password == '1234':
+        
+        # Check if user exists and password matches
+        if user and user.password == password:
             login_user(user)
             flash('Logged in successfully.', 'success')
             return redirect(url_for('admin_dashboard'))
@@ -177,10 +184,19 @@ def admin_dashboard():
     
     items = query.all()
     
-    # Calculate sold quantity and refundable quantity for each item
-    items_with_info = [(item, item.initial_quantity - item.quantity, item.initial_quantity - item.quantity) for item in items]
+    items_with_info = [
+        {
+            'item': item,
+            'sold_quantity': item.initial_quantity - item.quantity,
+            'refundable_quantity': item.initial_quantity - item.quantity
+        }
+        for item in items
+    ]
     
-    return render_template('admin_dashboard.html', items=items_with_info, filter_type=filter_type, sort_by=sort_by)
+    return render_template('admin_dashboard.html', 
+                         items=items_with_info, 
+                         filter_type=filter_type, 
+                         sort_by=sort_by)
 
 @app.route('/refund_page/<int:item_id>')
 @login_required
@@ -231,7 +247,6 @@ def add_item():
         price = request.form.get('price')
         quantity = request.form.get('quantity')
         
-        # Validate barcode
         if not re.match(r'^\d{13}$', barcode):
             flash('Barcode must be a 13-digit number.', 'error')
             return render_template('add_item.html')
@@ -476,6 +491,13 @@ def generate_pdf_report(items):
         download_name='inventory_report.pdf'
     )
 
+# Route to add admin users (for development)
+@app.route('/add_admin/<username>/<password>')
+def add_admin(username, password):
+    if add_admin_user(username, password):
+        return f"Admin user {username} created successfully"
+    return "Error creating admin user"
+
 @app.cli.command("reset_initial_quantities")
 def reset_initial_quantities():
     with app.app_context():
@@ -491,11 +513,11 @@ def reset_db():
     with app.app_context():
         db.drop_all()
         db.create_all()
-        create_admin_user()
+        # Create a default admin user
+        add_admin_user('admin', '1234')
     print("Database has been reset and admin user created.")
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        create_admin_user()
     app.run(debug=True)
