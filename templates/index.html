@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Store Items</h1>
+    
+    <form method="POST" class="mb-4">
+        <div class="form-group">
+            <label for="scanned_code">Scan Product ID or Barcode:</label>
+            <input type="text" class="form-control" id="scanned_code" name="scanned_code" required>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="submit" name="action" value="find" class="btn btn-primary">Find Item</button>
+            <button type="submit" name="action" value="refund" class="btn btn-secondary">Refund Item</button>
+        </div>
+    </form>
+
+    {% if message %}
+        <div class="alert alert-info">{{ message }}</div>
+    {% endif %}
+{% endblock %}

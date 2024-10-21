@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Purchase Item</h1>
+    <h2>{{ item.name }}</h2>
+    <p>Price: ${{ "%.2f"|format(item.price) }}</p>
+    <p>Available Quantity: {{ item.quantity }}</p>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label for="quantity">Quantity to Purchase:</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" min="1" max="{{ item.quantity }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Proceed to Payment</button>
+    </form>
+{% endblock %}

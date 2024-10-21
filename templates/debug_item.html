@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Debug: All Items</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Initial Quantity</th>
+            <th>Sold?</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.initial_quantity }}</td>
+            <td>{{ "Yes" if item.quantity < item.initial_quantity else "No" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

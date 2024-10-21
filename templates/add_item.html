@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Add/Edit Item</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="POST" id="addItemForm">
+        <div class="form-group">
+            <label for="barcode">Barcode (13 digits)</label>
+            <input type="text" class="form-control" id="barcode" name="barcode" required autofocus 
+                   pattern="\d{13}" title="Please enter a 13-digit number" maxlength="13">
+            <small id="barcodeHelp" class="form-text text-muted">Barcode must be a 13-digit number.</small>
+        </div>
+        <div class="form-group">
+            <label for="name">Description</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="price">Price</label>
+            <input type="number" class="form-control" id="price" name="price" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" value="0" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="addButton">Add Item</button>
+        <button type="button" class="btn btn-warning" id="modifyButton" style="display: none;">Modify Existing Item</button>
+    </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('barcode').addEventListener('input', function(e) {
+        // Remove any non-digit characters
+        this.value = this.value.replace(/\D/g, '');
+        
+        // Limit to 13 digits
+        if (this.value.length > 13) {
+            this.value = this.value.slice(0, 13);
+        }
+        
+        // Check if barcode is complete (13 digits)
+        if (this.value.length === 13) {
+            checkBarcode(this.value);
+        } else {
+            // Reset form if barcode is not complete
+            resetForm();
+        }
+    });
+
+    function checkBarcode(barcode) {
+        fetch('/check_barcode?barcode=' + barcode)
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    document.getElementById('name').value = data.item.name;
+                    document.getElementById('price').value = data.item.price;
+                    document.getElementById('quantity').value = data.item.quantity;
+                    document.getElementById('addButton').style.display = 'none';
+                    document.getElementById('modifyButton').style.display = 'inline-block';
+                    document.getElementById('addItemForm').setAttribute('data-item-id', data.item.id);
+                } else {
+                    resetForm();
+                }
+            });
+    }
+
+    function resetForm() {
+        document.getElementById('name').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('quantity').value = '';
+        document.getElementById('addButton').style.display = 'inline-block';
+        document.getElementById('modifyButton').style.display = 'none';
+        document.getElementById('addItemForm').removeAttribute('data-item-id');
+    }
+
+    document.getElementById('modifyButton').addEventListener('click', function(e) {
+        e.preventDefault();
+        var form = document.getElementById('addItemForm');
+        var itemId = form.getAttribute('data-item-id');
+        if (itemId) {
+            form.action = "{{ url_for('edit_item', id=0) }}".replace('0', itemId);
+            form.submit();
+        }
+    });
+
+    document.getElementById('addItemForm').addEventListener('submit', function(e) {
+        var barcodeInput = document.getElementById('barcode');
+        if (barcodeInput.value.length !== 13 || !/^\d{13}$/.test(barcodeInput.value)) {
+            e.preventDefault();
+            alert('Please enter a valid 13-digit barcode.');
+            return false;
+        }
+        
+        var modifyButton = document.getElementById('modifyButton');
+        if (modifyButton.style.display === 'none') {
+            this.action = "{{ url_for('add_item') }}";
+        }
+    });
+</script>
+{% endblock %}
